@@ -17,8 +17,10 @@ exports.register = (server, opts, next) => {
     const item = opts.collections[index];
     const collection = db.collection(index);
 
-    collection.createIndex(item.keys, item.options || { background: true }, err => {
-      server.log(['hapi-mongo-indexes'], err);
+    item.keys.forEach(keys => {
+      collection.createIndex(keys, item.options || { background: true }, err => {
+        server.log(['hapi-mongo-indexes'], err);
+      });
     });
   });
   next();

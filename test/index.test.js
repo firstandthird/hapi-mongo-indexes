@@ -38,9 +38,12 @@ const mongoOpts = {
 const pluginOpts = {
   collections: {
     testcollection: {
-      keys: {
+      keys: [{
         name: 1
-      }
+      },
+      {
+        name: -1
+      }]
     }
   }
 };
@@ -66,6 +69,7 @@ describe('hapi-mongo-indexes', () => {
       collection.indexInformation((err, doc) => {
         const indexes = Object.keys(doc);
         assert(indexes.includes('name_1'), 'Index created');
+        assert(indexes.includes('name_-1'), 'Index created');
         done();
       })
     });
