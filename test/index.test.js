@@ -37,14 +37,13 @@ const mongoOpts = {
 };
 const pluginOpts = {
   collections: {
-    testcollection: {
-      keys: [{
-        name: 1
+    testcollection: [{ keys: { name: 1 } }, { keys: { name: -1 } }],
+    timedCollection: [{
+      keys: {
+        createdOn: 1
       },
-      {
-        name: -1
-      }]
-    }
+      options: { expireAfterSeconds: 10 }
+    }]
   }
 };
 
