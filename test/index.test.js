@@ -17,7 +17,7 @@ const launchServer = (server, port, mongoOpts, pluginOpts, done) => {
     }
   ], (err) => {
     if (err) {
-      console.log(err);
+      throw err;
     }
     assert(err === undefined);
     server.start((startErr) => {
@@ -42,7 +42,7 @@ const pluginOpts = {
       keys: {
         createdOn: 1
       },
-      options: { expireAfterSeconds: 10 }
+      options: { expireAfterSeconds: 5 }
     }]
   }
 };
@@ -60,17 +60,40 @@ describe('hapi-mongo-indexes', () => {
   it('should create index', done => {
     const db = server.plugins['hapi-mongodb'].db;
     const collection = db.collection('testcollection');
-
     collection.insert({
       name: 'testname',
       test: true
     }, err => {
-      collection.indexInformation((err, doc) => {
+      assert.equal(err, null);
+      collection.indexInformation((err2, doc) => {
+        assert.equal(err2, null);
         const indexes = Object.keys(doc);
-        assert(indexes.includes('name_1'), 'Index created');
-        assert(indexes.includes('name_-1'), 'Index created');
+        assert(indexes.includes('name_1_name_-1'), 'Index created');
         done();
-      })
+      });
+    });
+  });
+  it('should create index with properties', function (done) {
+    this.timeout(70000);
+    const db = server.plugins['hapi-mongodb'].db;
+    const collection = db.collection('timedCollection');
+    collection.insert({
+      name: 'testname',
+      test: true,
+      createdOn: new Date(new Date().getTime() - 100000) // set createdOn in the past so its collected
+    }, err => {
+      assert.equal(err, null);
+      collection.indexInformation((err2, doc) => {
+        assert.equal(err2, null);
+        const indexes = Object.keys(doc);
+        assert(indexes.includes('createdOn_1'), 'Index created');
+        setTimeout(() => {
+          collection.find({}).toArray((err3, arr) => {
+            assert.equal(arr.length, 0);
+            done();
+          });
+        }, 60 * 1000);
+      });
     });
   });
 });
