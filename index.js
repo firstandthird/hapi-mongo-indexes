@@ -14,11 +14,10 @@ exports.register = (server, opts, next) => {
   }
 
   Object.keys(opts.collections).forEach(index => {
-    const item = opts.collections[index];
+    const collectionConfig = opts.collections[index];
     const collection = db.collection(index);
-
-    item.keys.forEach(keys => {
-      collection.createIndex(keys, item.options || { background: true }, err => {
+    collectionConfig.forEach(indexConfig => {
+      collection.createIndex(indexConfig.keys, indexConfig.options || { background: true }, err => {
         server.log(['hapi-mongo-indexes'], err);
       });
     });
