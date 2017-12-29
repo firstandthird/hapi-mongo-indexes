@@ -4,12 +4,14 @@
   "description": "Ensures indexes",
   "main": "index.js",
   "scripts": {
-    "test": "lab -C"
+    "test": "lab --leaks -e test -c",
+    "coveralls": "lab -r lcov | coveralls"
   },
   "author": "First+Third",
   "license": "MIT",
   "devDependencies": {
     "code": "^5.1.2",
+    "coveralls": "^3.0.0",
     "eslint": "^3.9.1",
     "eslint-config-firstandthird": "^3.0.2",
     "eslint-plugin-import": "^2.1.0",
