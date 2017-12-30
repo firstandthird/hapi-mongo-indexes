@@ -1,6 +1,6 @@
 {
   "name": "hapi-mongo-indexes",
-  "version": "2.0.1",
+  "version": "3.0.0",
   "description": "Ensures indexes",
   "main": "index.js",
   "scripts": {
