@@ -1,99 +1,74 @@
-/* globals describe, before, after, it */
 'use strict';
-const chai = require('chai');
-const assert = chai.assert;
+const Lab = require('lab');
+const lab = exports.lab = Lab.script();
+const code = require('code');
+
 const Hapi = require('hapi');
 
-const launchServer = (server, port, mongoOpts, pluginOpts, done) => {
-  server.connection({ port });
-  server.register([
-    {
-      register: require('hapi-mongodb'),
+lab.experiment('hapi-mongo-indexes', () => {
+  let server;
+  
+  const mongoOpts = {
+    url: 'mongodb://localhost:27017/sampledb',
+    decorate: true
+  };
+
+  const pluginOpts = {
+    collections: {
+      testcollection: [{ keys: { name: 1 } }, { keys: { name: -1 } }],
+      timedCollection: [{
+        keys: {
+          createdOn: 1
+        },
+        options: { expireAfterSeconds: 5 }
+      }]
+    }
+  };
+
+  lab.before(async() => {
+    server = new Hapi.Server({ port: 8080 });
+    await server.register({
+      plugin: require('hapi-mongodb'),
       options: mongoOpts
-    },
-    {
-      register: require('../'),
+    });
+
+    await server.register({
+      plugin: require('../'),
       options: pluginOpts
-    }
-  ], (err) => {
-    if (err) {
-      throw err;
-    }
-    assert(err === undefined);
-    server.start((startErr) => {
-      if (startErr) {
-        return done(startErr);
-      }
-      done();
     });
   });
-};
 
-let server;
-const port = 8083;
-const mongoOpts = {
-  url: 'mongodb://localhost:27017',
-  decorate: undefined
-};
-const pluginOpts = {
-  collections: {
-    testcollection: [{ keys: { name: 1 } }, { keys: { name: -1 } }],
-    timedCollection: [{
-      keys: {
-        createdOn: 1
-      },
-      options: { expireAfterSeconds: 5 }
-    }]
-  }
-};
-
-describe('hapi-mongo-indexes', () => {
-  before(done => {
-    server = new Hapi.Server();
-    launchServer(server, port, mongoOpts, pluginOpts, done);
+  lab.after(async() => {
+    await server.stop(); 
   });
 
-  after(done => {
-    server.stop(done);
-  });
-
-  it('should create index', done => {
-    const db = server.plugins['hapi-mongodb'].db;
+  lab.test('it should create an index', async() => {
+    const db = server.mongo.db;
     const collection = db.collection('testcollection');
-    collection.insert({
+    await collection.insert({
       name: 'testname',
       test: true
-    }, err => {
-      assert.equal(err, null);
-      collection.indexInformation((err2, doc) => {
-        assert.equal(err2, null);
-        const indexes = Object.keys(doc);
-        assert(indexes.includes('name_1_name_-1'), 'Index created');
-        done();
-      });
     });
+    const doc = await collection.indexInformation();
+    const indexes = Object.keys(doc);
+    code.expect(indexes).to.include('name_-1');
+    code.expect(indexes).to.include('name_1');
   });
-  it('should create index with properties', function (done) {
-    this.timeout(70000);
-    const db = server.plugins['hapi-mongodb'].db;
+
+  lab.test('it should create index with properties', async() => {
+    const db = server.mongo.db;
     const collection = db.collection('timedCollection');
-    collection.insert({
+    await collection.insert({
       name: 'testname',
       test: true,
       createdOn: new Date(new Date().getTime() - 100000) // set createdOn in the past so its collected
-    }, err => {
-      assert.equal(err, null);
-      collection.indexInformation((err2, doc) => {
-        assert.equal(err2, null);
-        const indexes = Object.keys(doc);
-        assert(indexes.includes('createdOn_1'), 'Index created');
-        setTimeout(() => {
-          collection.find({}).toArray((err3, arr) => {
-            assert.equal(arr.length, 0);
-            done();
-          });
-        }, 60 * 1000);
-      });
     });
+
+    const doc = await collection.indexInformation();
+    const indexes = Object.keys(doc);
+    code.expect(indexes).to.include('createdOn_1');
+
+    const docs = await collection.find({});
+    code.expect(docs).to.not.be.null();
   });
 });
